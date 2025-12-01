@@ -6,6 +6,8 @@
   <p>Written in Svelte, Tailwindcss, and ffmpeg</p>
 </div>
 
+![Screen shot](./.github/screepnshot.png)
+
 # Developing
 
 > [!IMPORTANT]
