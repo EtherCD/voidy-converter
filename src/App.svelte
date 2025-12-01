@@ -23,12 +23,17 @@
 	let imageBlob: Blob | undefined = $state();
 
 	let processed = $state(false);
+	let inProcess = $state(false);
+	let progress = $state(1);
 
 	let ffmpeg = $state(new FFmpeg());
 	const load = async () => {
 		ffmpeg.on("log", (msg) => {
 			if (logs.length > 100) logs = logs.slice(logs.length - 101, logs.length - 1);
 			logs.push(`[${msg.type}]: ${msg.message}`);
+		});
+		ffmpeg.on("progress", (prog) => {
+			progress = prog.progress * 100;
 		});
 		await ffmpeg.load({
 			coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
@@ -60,7 +65,11 @@
 			logs.push("FFMPEG is not loaded!");
 			return;
 		}
+		if (inProcess) {
+			return;
+		}
 
+		inProcess = true;
 		const ext = file.name.split(".").pop();
 		const fileName = `input.${ext}`;
 
@@ -82,6 +91,8 @@
 		imageSrc = img.src;
 		imageName = file.name + ".gif";
 		processed = true;
+
+		inProcess = false;
 	};
 
 	const change = (event: Event) => {
@@ -101,7 +112,7 @@
 		<input type="file" id={"file"} class={"w-full h-full absolute opacity-0 pointer-none"} accept="video/*" onchange={change} />
 		<DragAFile />
 	{:else}
-		<div class={"p-1 rounded-2xl outline-1 flex flex-col md:flex-row gap-1 mt-40 md:mt-0 "}>
+		<div class={"p-1 rounded-2xl outline-1 flex flex-col md:flex-row gap-1 "}>
 			<Window class={"gap-1 flex flex-col"}
 				><h1 class={"text-2xl"}>Selected File</h1>
 				<video src={URL.createObjectURL(file)} class={"max-w-[300px]"} controls><track kind="captions" /></video></Window
@@ -160,6 +171,16 @@
 							<a class={"p-1 bg-(--window-bg) rounded-2xl w-full disabled:opacity-50 text-center"} href={imageSrc} download={imageName}>Download</a>
 						{/if}
 					</div>
+
+					<progress
+						class={`"appearance-none w-full h-2 overflow-hidden rounded-xl 
+           bg-(--window-bg)
+           [&::-webkit-progress-bar]:bg-(--window-bg)
+           [&::-webkit-progress-value]:bg-(--color)
+           [&::-moz-progress-bar]:bg-(--color)`}
+						value={progress}
+						max={100}
+					></progress>
 				</div>
 			</div>
 
