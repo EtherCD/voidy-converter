@@ -20,6 +20,7 @@
 	let img: HTMLImageElement;
 	let imageSrc = $state("");
 	let imageName = $state("");
+	let imageBlob: Blob | undefined = $state();
 
 	let processed = $state(false);
 
@@ -76,7 +77,8 @@
 		await ffmpeg.exec(args);
 
 		const data = await ffmpeg.readFile("t.gif");
-		img.src = URL.createObjectURL(new Blob([data as any], { type: "image/gif" }));
+		imageBlob = new Blob([data as any], { type: "image/gif" });
+		img.src = URL.createObjectURL(imageBlob);
 		imageSrc = img.src;
 		imageName = file.name + ".gif";
 		processed = true;
@@ -163,8 +165,11 @@
 
 			<Window class={"gap-1 flex flex-col"}
 				><h1 class={"text-2xl"}>Output image</h1>
-				<img bind:this={img} class={"max-w-[300px]"} src={"/favicon.svg"} alt={""} /></Window
-			>
+				<img bind:this={img} class={"max-w-[300px]"} src={"/favicon.svg"} alt={""} />
+				{#if imageBlob}
+					<p>Image size: {(imageBlob.size / 1024 / 1024).toFixed(2)} MiB</p>
+				{/if}
+			</Window>
 		</div>
 		<div class={"p-1 rounded-2xl outline-1 flex flex-col gap-1"}>
 			<h1>Logs</h1>
