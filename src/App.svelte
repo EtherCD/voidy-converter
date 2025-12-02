@@ -160,16 +160,16 @@
 				<div class={"flex gap-0.5 flex-col md:flex-row mb-0.5 "}>
 					<div class={"w-full"}>
 						<p class={"text-xl"}>Scale (width):</p>
-						<input type="number" bind:value={scale} class={"p-1 bg-(--window-bg) rounded-2xl  w-full"} />
+						<input type="number" bind:value={scale} class={"p-1 bg-(--window-bg) rounded-2xl text-xl w-full"} />
 						<p class={"text-xl "}>FPS:</p>
-						<input type="number" bind:value={fps} class={"p-1 bg-(--window-bg) rounded-2xl w-full"} />
+						<input type="number" bind:value={fps} class={"p-1 bg-(--window-bg) rounded-2xl text-xl w-full"} />
 					</div>
 				</div>
 				<div class={"flex flex-col gap-0.5"}>
-					<button class={"p-1 bg-(--window-bg) rounded-2xl w-full"} onclick={toGif}>Go!</button>
+					<button class={"p-1 bg-(--window-bg) rounded-2xl w-full text-xl"} onclick={toGif}>Go!</button>
 					<div class={"flex gap-0.5"}>
 						<button
-							class={"p-1 bg-(--window-bg) rounded-2xl w-full"}
+							class={"p-1 bg-(--window-bg) rounded-2xl w-full text-xl"}
 							onclick={() => {
 								file = undefined;
 							}}>Select other video</button
@@ -200,7 +200,7 @@
 				{/if}
 			</Window>
 		</div>
-		<div class={"p-1 rounded-2xl outline-1 flex flex-col gap-1"}>
+		<div class={"p-1 rounded-2xl outline-1 flex flex-col gap-1 text-xl"}>
 			<h1>Logs</h1>
 			<div class={"text-left md:w-30  h-10 overflow-y-scroll"} bind:this={logsContainer}>
 				<Window class={"text-left"}>
