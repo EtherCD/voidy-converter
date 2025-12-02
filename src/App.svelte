@@ -194,7 +194,7 @@
 
 			<Window class={"gap-1 flex flex-col"}
 				><h1 class={"text-2xl"}>Output image</h1>
-				<img bind:this={img} class={"max-w-[300px]"} src={"/favicon.svg"} alt={""} />
+				<img bind:this={img} class={"max-w-[300px] min-w-[300px]"} src={"/favicon.svg"} alt={""} />
 				{#if imageBlob}
 					<p>Image size: {(imageBlob.size / 1024 / 1024).toFixed(2)} MiB</p>
 				{/if}
