@@ -3,24 +3,29 @@
 	import { fetchFile, toBlobURL } from "@ffmpeg/util";
 	import DragAFile from "./lib/dragafile.svelte";
 	import Window from "./lib/window.svelte";
+	import Slider from "./lib/slider.svelte";
+	import { tick } from "svelte";
 	const baseURL = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
 
+	let fileInput: HTMLInputElement;
 	let file: File | undefined = $state();
+	let fileName: string = $state("");
 	let ffmpegLoaded = $state(false);
 
 	let scale = $state(0);
 
-	let isTimeCut = $state(false);
-	let timeCutStart = $state(0);
-	let timeCutEnd = $state(0.1);
+	let cutTimeStart = $state(0);
+	let cutTimeEnd = $state(0);
 
 	let logs = $state(["Nothing here!"]);
+	let logsContainer: HTMLDivElement;
 
 	let fps = $state(15);
 	let img: HTMLImageElement;
 	let imageSrc = $state("");
 	let imageName = $state("");
 	let imageBlob: Blob | undefined = $state();
+	let videoDuration = $state(0);
 
 	let processed = $state(false);
 	let inProcess = $state(false);
@@ -29,8 +34,11 @@
 	let ffmpeg = $state(new FFmpeg());
 	const load = async () => {
 		ffmpeg.on("log", (msg) => {
-			if (logs.length > 100) logs = logs.slice(logs.length - 101, logs.length - 1);
+			if (logs.length > 20) logs = logs.slice(-20);
 			logs.push(`[${msg.type}]: ${msg.message}`);
+			tick().then(() => {
+				logsContainer.scrollTop = logsContainer.scrollHeight;
+			});
 		});
 		ffmpeg.on("progress", (prog) => {
 			progress = prog.progress * 100;
@@ -79,7 +87,7 @@
 		await ffmpeg.exec(["-i", fileName, "-vf", `fps=${fps},scale=${scale}:-1:flags=lanczos,palettegen`, "palette.png"]);
 		let args = ["-i", fileName, "-i", "palette.png"];
 
-		if (isTimeCut) args.push("-ss", toTimeCode(timeCutStart), "-to", toTimeCode(timeCutEnd));
+		if (cutTimeStart !== 0 || cutTimeEnd !== videoDuration) args.push("-ss", toTimeCode(cutTimeStart), "-to", toTimeCode(cutTimeEnd));
 
 		args.push("-filter_complex", `fps=${fps},scale=${scale}:-1:flags=lanczos[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=5`, "t.gif");
 		console.log(args);
@@ -95,11 +103,32 @@
 		inProcess = false;
 	};
 
-	const change = (event: Event) => {
+	const change = async (event: Event) => {
 		const target = event.target as HTMLInputElement;
 		if (!target.files || target.files.length === 0) return;
+
+		try {
+			if (file) await ffmpeg.deleteFile(fileName);
+		} catch {}
+
 		file = target.files[0];
+		const ext = file.name.split(".").pop();
+		fileName = `input.${ext}`;
 		processed = false;
+
+		cutTimeStart = 0;
+		cutTimeEnd = videoDuration;
+	};
+
+	const onloadedmetadata = (event: Event) => {
+		videoDuration = (event.target as HTMLVideoElement).duration;
+		cutTimeStart = 0;
+		cutTimeEnd = videoDuration;
+	};
+
+	const onchangeslider = (min: number, max: number) => {
+		cutTimeStart = min;
+		cutTimeEnd = max;
 	};
 
 	$effect(() => {
@@ -107,54 +136,33 @@
 	});
 </script>
 
-<main class={"flex justify-center md:items-center w-full h-[100vh] flex-col gap-1 p-1"}>
+<main class={"flex justify-center md:items-center w-full min-h-screen flex-col gap-1 p-1"}>
 	{#if !file}
-		<input type="file" id={"file"} class={"w-full h-full absolute opacity-0 pointer-none"} accept="video/*" onchange={change} />
+		<input type="file" id={"file"} class={"w-full h-full absolute opacity-0 pointer-none pointer-none"} accept="video/*" onchange={change} bind:this={fileInput} />
+		<!-- svelte-ignore a11y_consider_explicit_label -->
+		<button
+			class={"w-full h-full absolute "}
+			onclick={() => {
+				fileInput.click();
+			}}
+		></button>
 		<DragAFile />
 	{:else}
-		<div class={"p-1 rounded-2xl outline-1 flex flex-col md:flex-row gap-1 "}>
-			<Window class={"gap-1 flex flex-col"}
-				><h1 class={"text-2xl"}>Selected File</h1>
-				<video src={URL.createObjectURL(file)} class={"max-w-[300px]"} controls><track kind="captions" /></video></Window
-			>
+		<div class={"p-1 rounded-2xl outline-1 flex flex-col md:flex-row gap-0.5 "}>
+			<Window class={"gap-1 flex flex-col"}>
+				<h1 class={"text-2xl"}>Selected File</h1>
+				<video src={URL.createObjectURL(file)} class={"max-w-[300px]"} controls {onloadedmetadata}><track kind="captions" /></video>
+				<p class={"text-xl "}>Time cut</p>
+				<Slider min={0} max={videoDuration} onchange={onchangeslider} />
+			</Window>
 			<div>
 				<h1 class={"text-2xl"}>Online video to gif converter</h1>
-				<div class={"flex gap-0.5 flex-col md:flex-row "}>
-					<div>
+				<div class={"flex gap-0.5 flex-col md:flex-row mb-0.5 "}>
+					<div class={"w-full"}>
 						<p class={"text-xl"}>Scale (width):</p>
-						<input type="number" bind:value={scale} class={"p-1 bg-(--window-bg) rounded-2xl  md:w-10"} />
-						<p class={"text-xl"}>FPS:</p>
-						<input type="number" bind:value={fps} class={"p-1 bg-(--window-bg) rounded-2xl md:w-10"} />
-					</div>
-
-					<div class={"flex flex-col"}>
-						<label for="#startTime" class={"text-xl m-0"}>Start Time</label>
-						<input
-							type="number"
-							name="Scale"
-							disabled={!isTimeCut}
-							id={"startTime"}
-							step={0.1}
-							bind:value={timeCutStart}
-							class={"bg-(--window-bg) p-1 rounded-2xl disabled:opacity-50 md:w-10"}
-							min="0"
-						/>
-						<label for="#endTime" class={"text-xl m-0"}>End Time</label>
-						<input
-							type="number"
-							name="Scale"
-							disabled={!isTimeCut}
-							id={"endTime"}
-							bind:value={timeCutEnd}
-							step={0.1}
-							class={"bg-(--window-bg) p-1 rounded-2xl disabled:opacity-50 md:w-10"}
-							min="0.1"
-						/>
-
-						<div>
-							<label for="#check" class={"text-xl m-0"}>Enable time cut</label>
-							<input type="checkbox" id={"check"} class={"bg-[#454d62] p-1 rounded-2xl disabled:opacity-50"} bind:checked={isTimeCut} />
-						</div>
+						<input type="number" bind:value={scale} class={"p-1 bg-(--window-bg) rounded-2xl  w-full"} />
+						<p class={"text-xl "}>FPS:</p>
+						<input type="number" bind:value={fps} class={"p-1 bg-(--window-bg) rounded-2xl w-full"} />
 					</div>
 				</div>
 				<div class={"flex flex-col gap-0.5"}>
@@ -194,11 +202,13 @@
 		</div>
 		<div class={"p-1 rounded-2xl outline-1 flex flex-col gap-1"}>
 			<h1>Logs</h1>
-			<Window class={"text-left md:w-30  h-10 overflow-y-scroll"}>
-				{#each logs as log}
-					<p>{log}</p>
-				{/each}
-			</Window>
+			<div class={"text-left md:w-30  h-10 overflow-y-scroll"} bind:this={logsContainer}>
+				<Window class={"text-left"}>
+					{#each logs as log}
+						<p>{log}</p>
+					{/each}
+				</Window>
+			</div>
 		</div>
 	{/if}
 </main>
