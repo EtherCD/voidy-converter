@@ -105,6 +105,7 @@
 
 	const change = async (event: Event) => {
 		const target = event.target as HTMLInputElement;
+		console.log("")
 		if (!target.files || target.files.length === 0) return;
 
 		try {
@@ -139,13 +140,6 @@
 <main class={"flex justify-center md:items-center w-full min-h-screen flex-col gap-1 p-1"}>
 	{#if !file}
 		<input type="file" id={"file"} class={"w-full h-full absolute opacity-0 pointer-none pointer-none"} accept="video/*" onchange={change} bind:this={fileInput} />
-		<!-- svelte-ignore a11y_consider_explicit_label -->
-		<button
-			class={"w-full h-full absolute "}
-			onclick={() => {
-				fileInput.click();
-			}}
-		></button>
 		<DragAFile />
 	{:else}
 		<div class={"p-1 rounded-2xl outline-1 flex flex-col md:flex-row gap-0.5 "}>
